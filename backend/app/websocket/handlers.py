@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.database import async_session
-from app.models.message import MessageStatus
+from app.models.message import Message, MessageStatus
 from app.models.group import GroupMember
 from app.models.user import User
 from app.services.auth_service import decode_access_token
@@ -27,15 +27,40 @@ async def _get_user_lang(user_id: uuid.UUID) -> str:
         return lang or "en"
 
 
+async def _get_recent_context(sender_id: uuid.UUID, receiver_id: uuid.UUID, limit: int = 3) -> list[str]:
+    """Get recent message texts for translation context."""
+    try:
+        async with async_session() as db:
+            from sqlalchemy import and_, or_
+            result = await db.execute(
+                select(Message.content)
+                .where(
+                    or_(
+                        and_(Message.sender_id == sender_id, Message.receiver_id == receiver_id),
+                        and_(Message.sender_id == receiver_id, Message.receiver_id == sender_id),
+                    ),
+                    Message.message_type == "text",
+                    Message.content != None,
+                )
+                .order_by(Message.created_at.desc())
+                .limit(limit)
+            )
+            texts = [r[0] for r in result.all() if r[0]]
+            return list(reversed(texts))
+    except Exception:
+        return []
+
+
 async def _translate_content(
     content: str | None,
     sender_id: uuid.UUID,
     receiver_id: uuid.UUID,
     sender_lang: str | None = None,
+    context: list[str] | None = None,
 ) -> tuple[str | None, str | None, str | None, bool]:
     """
-    Translate message content for the receiver.
-    Returns: (translated_content, original_content, source_language, was_translated)
+    Smart translation with auto-detection and context.
+    Returns: (translated_content, original_content, detected_source_lang, was_translated)
     """
     if not content or not settings.translation_enabled:
         return content, None, None, False
@@ -44,14 +69,25 @@ async def _translate_content(
         sender_lang = await _get_user_lang(sender_id)
     receiver_lang = await _get_user_lang(receiver_id)
 
-    if sender_lang == receiver_lang:
-        return content, None, sender_lang, False
-
+    # CRITICAL: Don't skip based on preferred_language alone.
+    # Auto-detect ACTUAL language and translate if it differs from receiver's lang.
     try:
-        result = await translate_for_user(content, sender_lang, receiver_lang)
-        if result.confidence > 0:
-            return result.translated_text, content, sender_lang, True
-        return content, None, sender_lang, False
+        from app.services.translation_service import detect_language
+        actual_lang = await detect_language(content)
+
+        # If text is already in receiver's language, skip
+        if actual_lang == receiver_lang:
+            return content, None, actual_lang, False
+
+        # Get conversation context for fluent translation
+        if context is None:
+            context = await _get_recent_context(sender_id, receiver_id)
+
+        result = await translate_for_user(content, actual_lang, receiver_lang, context)
+
+        if result.confidence > 0 and result.translated_text != content:
+            return result.translated_text, content, actual_lang, True
+        return content, None, actual_lang, False
     except Exception as e:
         logger.error("Translation error: %s", e)
         return content, None, sender_lang, False
@@ -123,11 +159,12 @@ async def _handle_message(sender_id: uuid.UUID, payload: dict):
     message_type = payload.get("message_type", "text")
     reply_to_id = uuid.UUID(payload["reply_to_id"]) if payload.get("reply_to_id") else None
 
-    # ── Translation Layer ──
-    # Translate content for the RECEIVER's language
+    # ── Smart Translation Layer ──
+    # Auto-detect language from text + use conversation context for fluency
     sender_lang = await _get_user_lang(sender_id)
+    context = await _get_recent_context(sender_id, receiver_id) if content else None
     translated_content, original_content, source_lang, was_translated = \
-        await _translate_content(content, sender_id, receiver_id, sender_lang)
+        await _translate_content(content, sender_id, receiver_id, sender_lang, context)
 
     # Save the original message (in sender's language) to DB
     async with async_session() as db:
