@@ -8,16 +8,21 @@ from app.models.call import Call, CallICECandidate, CallType, CallStatus
 from app.models.reaction import Reaction
 from app.models.poll import Poll, PollOption, PollVote
 from app.models.block import Block, Report, Session
+from app.models.voice_room import VoiceRoom, VoiceRoomParticipant, RoomStatus
+from app.models.schedule import ScheduleEvent, ScheduledMessage
+from app.models.innovative import (
+    AnonymousRoom, AnonymousParticipant,
+    PremiumMessage, PremiumUnlock,
+    Whiteboard, Playlist, PlaylistTrack, ChatRecap,
+)
 
 __all__ = [
-    "User",
-    "Message", "MessageStatus", "MessageType", "MessageDeletion", "ReadReceipt",
-    "Contact",
-    "Group", "GroupMember", "MemberRole",
-    "Channel", "ChannelSubscriber",
-    "Story", "StoryView", "StoryType",
-    "Call", "CallICECandidate", "CallType", "CallStatus",
-    "Reaction",
-    "Poll", "PollOption", "PollVote",
-    "Block", "Report", "Session",
+    "User", "Message", "MessageStatus", "MessageType", "MessageDeletion", "ReadReceipt",
+    "Contact", "Group", "GroupMember", "MemberRole", "Channel", "ChannelSubscriber",
+    "Story", "StoryView", "StoryType", "Call", "CallICECandidate", "CallType", "CallStatus",
+    "Reaction", "Poll", "PollOption", "PollVote", "Block", "Report", "Session",
+    "VoiceRoom", "VoiceRoomParticipant", "RoomStatus",
+    "ScheduleEvent", "ScheduledMessage",
+    "AnonymousRoom", "AnonymousParticipant", "PremiumMessage", "PremiumUnlock",
+    "Whiteboard", "Playlist", "PlaylistTrack", "ChatRecap",
 ]

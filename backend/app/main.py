@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api import auth, users, messages, contacts
 from app.api import groups, channels, stories, calls, security, translation
 from app.api import reactions, polls, moderation, ai, enhanced_messages, admin
+from app.api import voice_rooms, schedule, innovative
 from app.config import settings
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.websocket.handlers import websocket_endpoint
@@ -16,8 +17,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 
 app = FastAPI(
     title="Nexly",
-    description="Real-time messaging platform with AI, translation, calls, and more",
-    version="1.0.0",
+    description="Next-gen messaging platform with AI, translation, voice rooms, and more",
+    version="2.0.0",
 )
 
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120, burst=30)
@@ -33,29 +34,26 @@ app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(groups.router, prefix="/api/v1")
 app.include_router(channels.router, prefix="/api/v1")
 app.include_router(stories.router, prefix="/api/v1")
-
-# Calls
 app.include_router(calls.router, prefix="/api/v1")
 
-# Security
-app.include_router(security.router, prefix="/api/v1")
-
-# Translation
+# Intelligence
 app.include_router(translation.router, prefix="/api/v1")
-
-# Reactions, Polls, Moderation
-app.include_router(reactions.router, prefix="/api/v1")
-app.include_router(polls.router, prefix="/api/v1")
-app.include_router(moderation.router, prefix="/api/v1")
-
-# AI Features
 app.include_router(ai.router, prefix="/api/v1")
 
-# Enhanced Messages (edit, search, disappearing, location, sticker)
+# Engagement
+app.include_router(reactions.router, prefix="/api/v1")
+app.include_router(polls.router, prefix="/api/v1")
 app.include_router(enhanced_messages.router, prefix="/api/v1")
 
-# Admin & Analytics
+# Moderation & Security
+app.include_router(security.router, prefix="/api/v1")
+app.include_router(moderation.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+
+# Innovative Features
+app.include_router(voice_rooms.router, prefix="/api/v1")
+app.include_router(schedule.router, prefix="/api/v1")
+app.include_router(innovative.router, prefix="/api/v1")
 
 # WebSocket
 app.websocket("/ws")(websocket_endpoint)
@@ -67,4 +65,4 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "Nexly", "version": "1.0.0"}
+    return {"status": "ok", "app": "Nexly", "version": "2.0.0"}
