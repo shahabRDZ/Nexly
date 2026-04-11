@@ -1,10 +1,10 @@
-import { MessageCircle, Users, User, UsersRound, Radio, Eye, Phone } from 'lucide-react';
+import { MessageCircle, Users, Phone, Eye, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const tabs = [
   { path: '/chats', icon: MessageCircle, label: 'Chats' },
-  { path: '/groups', icon: UsersRound, label: 'Groups' },
-  { path: '/channels', icon: Radio, label: 'Channels' },
+  { path: '/groups', icon: Users, label: 'Groups' },
+  { path: '/calls', icon: Phone, label: 'Calls' },
   { path: '/stories', icon: Eye, label: 'Stories' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
@@ -13,7 +13,6 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Hide on detail pages
   const hidePaths = ['/chat/', '/group/', '/channel/'];
   if (hidePaths.some((p) => location.pathname.startsWith(p))) return null;
 
