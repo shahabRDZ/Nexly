@@ -66,9 +66,15 @@ function MessageContent({ message, isMine }: { message: Message; isMine: boolean
   switch (message.message_type) {
     case 'voice':
       return (
-        <audio controls className="h-8 max-w-full" style={{ filter: isMine ? 'invert(1) brightness(2) hue-rotate(180deg)' : 'none' }}>
-          <source src={message.media_url!} />
-        </audio>
+        <div className="min-w-[200px]">
+          <audio controls preload="metadata" className="w-full h-10"
+            style={{ filter: isMine ? 'invert(1) brightness(2) hue-rotate(180deg)' : 'none' }}>
+            <source src={message.media_url!} type="audio/webm" />
+            <source src={message.media_url!} type="audio/mp4" />
+            <source src={message.media_url!} type="audio/ogg" />
+            <source src={message.media_url!} />
+          </audio>
+        </div>
       );
     case 'image':
       return (

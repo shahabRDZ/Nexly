@@ -48,9 +48,9 @@ export const api = {
     request<Message[]>(`/messages/${userId}?limit=${limit}${before ? `&before=${before}` : ''}`),
   markStatus: (messageIds: string[], status: string) =>
     request('/messages/status', { method: 'PATCH', body: JSON.stringify({ message_ids: messageIds, status }) }),
-  sendVoice: (receiverId: string, file: Blob) => {
+  sendVoice: (receiverId: string, file: Blob, ext = 'webm') => {
     const form = new FormData();
-    form.append('file', file, 'voice.ogg');
+    form.append('file', file, `voice.${ext}`);
     return request<Message>(`/messages/voice/${receiverId}`, { method: 'POST', body: form });
   },
   sendMedia: (receiverId: string, file: File) => {
