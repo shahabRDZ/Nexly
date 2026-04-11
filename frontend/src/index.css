@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --nexly-primary: #6C5CE7;
+  --nexly-primary-light: #A29BFE;
+  --nexly-accent: #00CEC9;
+  --nexly-bg: #F8F9FA;
+  --nexly-surface: #FFFFFF;
+  --nexly-text: #2D3436;
+  --nexly-text-secondary: #636E72;
+  --nexly-border: #E9ECEF;
+  --nexly-sent: #6C5CE7;
+  --nexly-received: #FFFFFF;
+  --nexly-online: #00B894;
+}
+
+.dark {
+  --nexly-bg: #0D1117;
+  --nexly-surface: #161B22;
+  --nexly-text: #E6EDF3;
+  --nexly-text-secondary: #8B949E;
+  --nexly-border: #30363D;
+  --nexly-received: #21262D;
+}
+
+body {
+  margin: 0;
+  background-color: var(--nexly-bg);
+  color: var(--nexly-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--nexly-border); border-radius: 3px; }
