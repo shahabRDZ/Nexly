@@ -22,6 +22,9 @@ class MessageType(str, enum.Enum):
     VIDEO = "video"
     FILE = "file"
     STICKER = "sticker"
+    GIF = "gif"
+    LOCATION = "location"
+    POLL = "poll"
     SYSTEM = "system"
 
 
@@ -59,6 +62,18 @@ class Message(Base):
     deleted_for_all: Mapped[bool] = mapped_column(Boolean, default=False)
     # Encryption
     encrypted: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Disappearing
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    view_once: Mapped[bool] = mapped_column(Boolean, default=False)
+    view_once_opened: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Voice transcript
+    voice_transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Location
+    latitude: Mapped[float | None] = mapped_column(nullable=True)
+    longitude: Mapped[float | None] = mapped_column(nullable=True)
+    location_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # Sticker/GIF
+    sticker_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

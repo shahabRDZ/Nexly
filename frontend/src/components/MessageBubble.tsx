@@ -99,6 +99,20 @@ function MessageContent({ message, isMine }: { message: Message; isMine: boolean
           </div>
         </a>
       );
+    case 'location':
+      return (
+        <a href={`https://maps.google.com/?q=${message.content}`} target="_blank" rel="noopener noreferrer"
+          className={`flex items-center gap-2 py-1 ${isMine ? 'text-white' : 'text-[var(--nexly-sent)]'}`}>
+          <span className="text-2xl">📍</span>
+          <div>
+            <p className="text-sm font-medium">{(message as any).location_name || 'Shared location'}</p>
+            <p className="text-xs opacity-70">Tap to open map</p>
+          </div>
+        </a>
+      );
+    case 'sticker':
+    case 'gif':
+      return <img src={message.media_url || (message as any).sticker_url} alt="" className="max-w-[180px] max-h-[180px]" />;
     default:
       return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>;
   }

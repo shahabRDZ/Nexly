@@ -156,6 +156,63 @@ export const api = {
   getOriginalMessage: (messageId: string) =>
     request<{ message_id: string; original_content: string; translated_content: string; source_language: string; was_translated: boolean }>(
       `/translation/message/${messageId}/original`),
+
+  // Reactions
+  addReaction: (messageId: string, emoji: string) =>
+    request('/reactions/', { method: 'POST', body: JSON.stringify({ message_id: messageId, emoji }) }),
+  removeReaction: (messageId: string, emoji: string) =>
+    request(`/reactions/${messageId}/${encodeURIComponent(emoji)}`, { method: 'DELETE' }),
+  getReactions: (messageId: string) => request<ReactionGroup[]>(`/reactions/${messageId}`),
+
+  // Polls
+  createPoll: (data: { group_id?: string; question: string; options: string[]; multiple_choice?: boolean; anonymous?: boolean }) =>
+    request<PollData>('/polls/', { method: 'POST', body: JSON.stringify(data) }),
+  votePoll: (pollId: string, optionId: string) =>
+    request<PollData>(`/polls/${pollId}/vote/${optionId}`, { method: 'POST' }),
+  getPoll: (pollId: string) => request<PollData>(`/polls/${pollId}`),
+  closePoll: (pollId: string) => request(`/polls/${pollId}/close`, { method: 'POST' }),
+
+  // Moderation
+  blockUser: (userId: string) => request(`/moderation/block/${userId}`, { method: 'POST' }),
+  unblockUser: (userId: string) => request(`/moderation/block/${userId}`, { method: 'DELETE' }),
+  getBlockedUsers: () => request<{ id: string; name: string; phone: string }[]>('/moderation/blocked'),
+  reportUser: (data: { reported_user_id?: string; reported_message_id?: string; reason: string; description?: string }) =>
+    request('/moderation/report', { method: 'POST', body: JSON.stringify(data) }),
+  getSessions: () => request<SessionInfo[]>('/moderation/sessions'),
+  terminateSession: (id: string) => request(`/moderation/sessions/${id}`, { method: 'DELETE' }),
+
+  // AI
+  getSmartReplies: (conversationUserId: string) =>
+    request<{ replies: string[] }>('/ai/smart-reply', { method: 'POST', body: JSON.stringify({ conversation_user_id: conversationUserId }) }),
+  getChatSummary: (data: { conversation_user_id?: string; group_id?: string; hours?: number }) =>
+    request<{ summary: string; message_count: number }>('/ai/summary', { method: 'POST', body: JSON.stringify(data) }),
+  transcribeVoice: (messageId: string) =>
+    request<{ transcript: string; cached: boolean }>('/ai/transcribe', { method: 'POST', body: JSON.stringify({ message_id: messageId }) }),
+  askBot: (message: string) =>
+    request<{ response: string }>('/ai/bot', { method: 'POST', body: JSON.stringify({ message }) }),
+
+  // Enhanced Messages
+  editMessage: (messageId: string, content: string) =>
+    request(`/messages/${messageId}/edit`, { method: 'PATCH', body: JSON.stringify({ content }) }),
+  searchMessages: (query: string, otherUserId?: string) =>
+    request<SearchResult[]>(`/messages/search/${encodeURIComponent(query)}${otherUserId ? `?other_user_id=${otherUserId}` : ''}`),
+  sendDisappearing: (receiverId: string, content: string, expireSeconds: number) =>
+    request('/messages/disappearing', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId, content, expire_seconds: expireSeconds }) }),
+  openViewOnce: (messageId: string) =>
+    request<{ media_url: string; message_type: string }>(`/messages/view-once/${messageId}/open`, { method: 'POST' }),
+  sendLocation: (receiverId: string, lat: number, lng: number, name?: string) =>
+    request('/messages/location', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId, latitude: lat, longitude: lng, location_name: name }) }),
+  sendSticker: (receiverId: string, url: string, type: 'sticker' | 'gif') =>
+    request('/messages/sticker', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId, url, type }) }),
+
+  // Admin
+  getDashboard: () => request<DashboardData>('/admin/dashboard'),
+  getMessageAnalytics: (days?: number) => request<AnalyticsPoint[]>(`/admin/analytics/messages?days=${days || 7}`),
+  getUserAnalytics: (days?: number) => request<AnalyticsPoint[]>(`/admin/analytics/users?days=${days || 7}`),
+  getAdminUsers: (limit?: number, search?: string) =>
+    request<any[]>(`/admin/users?limit=${limit || 50}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  getReports: () => request<any[]>('/admin/reports'),
+  resolveReport: (id: string) => request(`/admin/reports/${id}/resolve`, { method: 'POST' }),
 };
 
 // ── Types ──
@@ -224,4 +281,36 @@ export interface StoryViewer {
 export interface CallRecord {
   id: string; caller_id: string; callee_id: string; call_type: string;
   status: string; duration_seconds: number | null; started_at: string; ended_at: string | null;
+}
+
+export interface ReactionGroup {
+  emoji: string; count: number; users: string[]; reacted_by_me: boolean;
+}
+
+export interface PollData {
+  id: string; question: string; creator_id: string;
+  multiple_choice: boolean; anonymous: boolean; closed: boolean;
+  options: { id: string; text: string; vote_count: number }[];
+  total_votes: number; my_votes: string[];
+}
+
+export interface SearchResult {
+  id: string; sender_id: string; receiver_id: string | null;
+  group_id: string | null; content: string; created_at: string;
+}
+
+export interface SessionInfo {
+  id: string; device_name: string; ip_address: string | null;
+  last_active: string; created_at: string;
+}
+
+export interface DashboardData {
+  users: { total: number; today: number; online: number };
+  messages: { total: number; today: number };
+  groups: number; channels: number; calls: number;
+  reports_pending: number;
+}
+
+export interface AnalyticsPoint {
+  date: string; count: number;
 }
