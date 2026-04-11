@@ -10,6 +10,7 @@ class UserProfile(BaseModel):
     name: str
     avatar_url: str | None
     status_text: str
+    preferred_language: str
     is_online: bool
     last_seen: datetime | None
 
@@ -19,6 +20,7 @@ class UserProfile(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     status_text: str | None = None
+    preferred_language: str | None = None
 
 
 class UserSearch(BaseModel):

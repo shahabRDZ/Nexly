@@ -37,6 +37,9 @@ class Message(Base):
     channel_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("channels.id"), nullable=True, index=True)
 
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    translated: Mapped[bool] = mapped_column(Boolean, default=False)
     message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), default=MessageType.TEXT)
     media_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     media_thumbnail: Mapped[str | None] = mapped_column(String(500), nullable=True)

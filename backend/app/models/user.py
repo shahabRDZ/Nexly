@@ -16,6 +16,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status_text: Mapped[str] = mapped_column(String(200), nullable=False, default="Hey, I'm using Nexly!")
+    preferred_language: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
     is_online: Mapped[bool] = mapped_column(default=False)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Security

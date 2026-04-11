@@ -30,6 +30,8 @@ async def update_me(
         current_user.name = body.name
     if body.status_text is not None:
         current_user.status_text = body.status_text
+    if body.preferred_language is not None:
+        current_user.preferred_language = body.preferred_language
     await db.commit()
     await db.refresh(current_user)
     return current_user

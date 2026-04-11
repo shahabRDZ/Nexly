@@ -145,20 +145,37 @@ export const api = {
   uploadPublicKey: (key: string) =>
     request('/security/keys/upload', { method: 'POST', body: JSON.stringify({ public_key: key }) }),
   getPublicKey: (userId: string) => request<{ user_id: string; public_key: string }>(`/security/keys/${userId}`),
+
+  // Translation
+  getLanguages: () => request<Language[]>('/translation/languages'),
+  setLanguage: (language: string) =>
+    request('/translation/set-language', { method: 'POST', body: JSON.stringify({ language }) }),
+  translateText: (text: string, source: string, target: string) =>
+    request<{ translated_text: string; source_language: string; target_language: string; confidence: number }>(
+      '/translation/translate', { method: 'POST', body: JSON.stringify({ text, source, target }) }),
+  getOriginalMessage: (messageId: string) =>
+    request<{ message_id: string; original_content: string; translated_content: string; source_language: string; was_translated: boolean }>(
+      `/translation/message/${messageId}/original`),
 };
 
 // ── Types ──
 
 export interface User {
   id: string; phone: string; name: string; avatar_url: string | null;
-  status_text: string; is_online: boolean; last_seen: string | null;
+  status_text: string; preferred_language: string; is_online: boolean; last_seen: string | null;
   two_fa_enabled?: boolean;
+}
+
+export interface Language {
+  code: string; name: string;
 }
 
 export interface Message {
   id: string; sender_id: string; receiver_id: string | null;
   group_id: string | null; channel_id: string | null;
-  content: string | null; message_type: string;
+  content: string | null; original_content: string | null;
+  source_language: string | null; translated: boolean;
+  message_type: string;
   media_url: string | null; media_name: string | null; media_size: number | null;
   status: 'sent' | 'delivered' | 'seen';
   reply_to_id: string | null; is_forwarded: boolean; is_pinned: boolean;

@@ -21,11 +21,17 @@ async def save_message(
     reply_to_id: uuid.UUID | None = None,
     is_forwarded: bool = False,
     forwarded_from_id: uuid.UUID | None = None,
+    original_content: str | None = None,
+    source_language: str | None = None,
+    translated: bool = False,
 ) -> Message:
     msg = Message(
         sender_id=sender_id,
         receiver_id=receiver_id,
         content=content,
+        original_content=original_content,
+        source_language=source_language,
+        translated=translated,
         message_type=message_type,
         media_url=media_url,
         media_size=media_size,

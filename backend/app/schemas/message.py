@@ -20,6 +20,9 @@ class MessageOut(BaseModel):
     group_id: uuid.UUID | None = None
     channel_id: uuid.UUID | None = None
     content: str | None
+    original_content: str | None = None
+    source_language: str | None = None
+    translated: bool = False
     message_type: MessageType
     media_url: str | None
     media_thumbnail: str | None = None

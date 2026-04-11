@@ -1,4 +1,5 @@
-import { Check, CheckCheck, FileText, Image as ImageIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Check, CheckCheck, FileText, Globe, Eye } from 'lucide-react';
 import type { Message } from '../lib/api';
 
 interface Props {
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export function MessageBubble({ message, isMine }: Props) {
+  const [showOriginal, setShowOriginal] = useState(false);
+
   if (message.deleted_for_all) {
     return (
       <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1`}>
@@ -18,6 +21,8 @@ export function MessageBubble({ message, isMine }: Props) {
   }
 
   const time = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isTranslated = message.translated && message.original_content;
+  const displayContent = showOriginal ? message.original_content : message.content;
 
   return (
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1`}>
@@ -30,7 +35,21 @@ export function MessageBubble({ message, isMine }: Props) {
           <p className={`text-xs mb-1 ${isMine ? 'text-white/60' : 'text-[var(--nexly-text-secondary)]'}`}>Forwarded</p>
         )}
 
-        <MessageContent message={message} isMine={isMine} />
+        <MessageContent message={{ ...message, content: displayContent ?? message.content }} isMine={isMine} />
+
+        {/* Translation indicator + Show Original toggle */}
+        {isTranslated && (
+          <button
+            onClick={() => setShowOriginal(!showOriginal)}
+            className={`flex items-center gap-1 mt-1 text-[10px] transition-colors ${
+              isMine ? 'text-white/50 hover:text-white/80' : 'text-[var(--nexly-text-secondary)] hover:text-[var(--nexly-text)]'
+            }`}
+          >
+            <Globe size={10} />
+            <span>{showOriginal ? 'Show translation' : `Translated from ${message.source_language?.toUpperCase()}`}</span>
+            <Eye size={10} />
+          </button>
+        )}
 
         <div className={`flex items-center gap-1 justify-end mt-1 ${isMine ? 'text-white/70' : 'text-[var(--nexly-text-secondary)]'}`}>
           {message.is_pinned && <span className="text-[10px]">pinned</span>}
@@ -51,7 +70,6 @@ function MessageContent({ message, isMine }: { message: Message; isMine: boolean
           <source src={message.media_url!} />
         </audio>
       );
-
     case 'image':
       return (
         <div className="mb-1">
@@ -62,14 +80,8 @@ function MessageContent({ message, isMine }: { message: Message; isMine: boolean
           )}
         </div>
       );
-
     case 'video':
-      return (
-        <div className="mb-1">
-          <video src={message.media_url!} controls className="rounded-lg max-w-full max-h-64" />
-        </div>
-      );
-
+      return <video src={message.media_url!} controls className="rounded-lg max-w-full max-h-64 mb-1" />;
     case 'file':
       return (
         <a href={message.media_url!} target="_blank" rel="noopener noreferrer"
@@ -81,13 +93,8 @@ function MessageContent({ message, isMine }: { message: Message; isMine: boolean
           </div>
         </a>
       );
-
     default:
-      return (
-        <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-          {message.content}
-        </p>
-      );
+      return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>;
   }
 }
 

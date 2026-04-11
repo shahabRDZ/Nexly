@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 10080  # 7 days
     media_dir: str = "./media"
     sms_provider: str = "console"  # "console" logs OTP, swap for real provider
+    libretranslate_url: str = "http://libretranslate:5000"
+    translation_enabled: bool = True
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

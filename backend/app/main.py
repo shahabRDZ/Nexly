@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api import auth, users, messages, contacts
-from app.api import groups, channels, stories, calls, security
+from app.api import groups, channels, stories, calls, security, translation
 from app.config import settings
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.websocket.handlers import websocket_endpoint
@@ -48,6 +48,9 @@ app.include_router(calls.router, prefix="/api/v1")
 # API routes — Phase 6 (Security)
 app.include_router(security.router, prefix="/api/v1")
 
+# API routes — Translation
+app.include_router(translation.router, prefix="/api/v1")
+
 # WebSocket
 app.websocket("/ws")(websocket_endpoint)
 
@@ -58,4 +61,4 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "Nexly", "version": "0.2.0"}
+    return {"status": "ok", "app": "Nexly", "version": "0.3.0"}
