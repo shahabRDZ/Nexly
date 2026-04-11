@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,11 +18,35 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 app = FastAPI(
     title="Nexly",
     description="Next-gen messaging platform with AI, translation, voice rooms, and more",
-    version="2.0.0",
+    version="2.1.0",
 )
 
+# Rate limiting
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120, burst=30)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# C-5 FIX: Proper CORS — use configured origins
+origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True if origins != ["*"] else False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# L-12 FIX: Security headers middleware
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    return response
+
 
 # Core
 app.include_router(auth.router, prefix="/api/v1")
@@ -65,4 +89,4 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "Nexly", "version": "2.0.0"}
+    return {"status": "ok", "app": "Nexly", "version": "2.1.0"}

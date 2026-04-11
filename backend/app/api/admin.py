@@ -15,14 +15,21 @@ from app.models.channel import Channel
 from app.models.call import Call
 from app.models.block import Report
 
+from app.config import settings
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# In production, add proper admin role checking
-ADMIN_PHONES = {"+14155551234"}  # Configurable
+
+def _get_admin_phones() -> set[str]:
+    """C-3 FIX: Admin phones from env config, not hardcoded."""
+    if settings.admin_phones:
+        return {p.strip() for p in settings.admin_phones.split(",") if p.strip()}
+    return set()
 
 
 async def _require_admin(current_user: User = Depends(get_current_user)):
-    if current_user.phone not in ADMIN_PHONES:
+    admin_phones = _get_admin_phones()
+    if not admin_phones or current_user.phone not in admin_phones:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 

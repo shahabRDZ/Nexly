@@ -9,11 +9,21 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexly"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   libretranslate:
     image: libretranslate/libretranslate:latest
@@ -32,20 +42,22 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://nexly:nexly_secret@postgres:5432/nexly
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: change-me-in-production
+      SECRET_KEY: ${SECRET_KEY:-}
       SMS_PROVIDER: console
       LIBRETRANSLATE_URL: http://libretranslate:5000
       TRANSLATION_ENABLED: "true"
+      ALLOWED_ORIGINS: "*"
+      ADMIN_PHONES: ${ADMIN_PHONES:-}
     depends_on:
-      - postgres
-      - redis
-      - libretranslate
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - media:/app/media
     command: >
       sh -c "
-        sleep 3 &&
         python -m app.create_tables &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "

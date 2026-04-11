@@ -67,19 +67,31 @@ async def mark_messages(
 # ── Media Upload (Image / Video / File) ──
 
 
-async def _save_upload(file: UploadFile, subdir: str) -> tuple[str, int, str]:
+# C-6 FIX: Whitelist safe extensions
+SAFE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp", "mp4", "webm", "mov", "mp3", "ogg", "wav",
+                   "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "zip", "rar", "7z"}
+
+
+async def _save_upload(file: UploadFile, subdir: str, max_size: int | None = None) -> tuple[str, int, str]:
     """Save uploaded file and return (url, size, original_name)."""
     upload_dir = os.path.join(settings.media_dir, subdir)
     os.makedirs(upload_dir, exist_ok=True)
-    ext = file.filename.rsplit(".", 1)[-1] if file.filename else "bin"
+
+    # Extract and validate extension
+    original_name = (file.filename or "file").split("/")[-1].split("\\")[-1]  # Strip path components
+    ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "bin"
+    if ext not in SAFE_EXTENSIONS:
+        ext = "bin"
+
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(upload_dir, filename)
     content = await file.read()
-    if len(content) > ALLOWED_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+    limit = max_size or settings.max_upload_size
+    if len(content) > limit:
+        raise HTTPException(status_code=413, detail=f"File too large (max {limit // (1024*1024)}MB)")
     async with aiofiles.open(filepath, "wb") as f:
         await f.write(content)
-    return f"/media/{subdir}/{filename}", len(content), file.filename or filename
+    return f"/media/{subdir}/{filename}", len(content), original_name
 
 
 @router.post("/media/{receiver_id}", response_model=MessageOut)
@@ -169,6 +181,9 @@ async def forward_message(
     original = await db.get(Message, message_id)
     if not original:
         raise HTTPException(status_code=404, detail="Message not found")
+    # M-1 FIX: Check user was participant in the original conversation
+    if current_user.id not in (original.sender_id, original.receiver_id):
+        raise HTTPException(status_code=403, detail="Cannot forward messages from other conversations")
 
     msg = await save_message(
         db,

@@ -49,12 +49,18 @@ async def upload_avatar(
     avatar_dir = os.path.join(settings.media_dir, "avatars")
     os.makedirs(avatar_dir, exist_ok=True)
 
-    ext = file.filename.rsplit(".", 1)[-1] if file.filename else "jpg"
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "jpg"
+    if ext not in ("jpg", "jpeg", "png", "webp"):
+        ext = "jpg"
     filename = f"{current_user.id}.{ext}"
     filepath = os.path.join(avatar_dir, filename)
 
+    content = await file.read()
+    # H-9 FIX: Limit avatar size
+    if len(content) > settings.max_avatar_size:
+        raise HTTPException(status_code=413, detail=f"Avatar too large (max {settings.max_avatar_size // (1024*1024)}MB)")
+
     async with aiofiles.open(filepath, "wb") as f:
-        content = await file.read()
         await f.write(content)
 
     current_user.avatar_url = f"/media/avatars/{filename}"

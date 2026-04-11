@@ -52,13 +52,17 @@ class ConnectionManager:
 
         return len(connections) > 0
 
-    async def broadcast_presence(self, user_id: uuid.UUID, is_online: bool) -> None:
-        """Notify all connected users about presence change."""
+    async def broadcast_presence(self, user_id: uuid.UUID, is_online: bool, contact_ids: list[uuid.UUID] | None = None) -> None:
+        """H-10 FIX: Only notify contacts/active conversations, not ALL users."""
         payload = {
             "user_id": str(user_id),
             "is_online": is_online,
         }
-        for uid in list(self._connections.keys()):
+        if contact_ids:
+            targets = [uid for uid in contact_ids if uid in self._connections]
+        else:
+            targets = list(self._connections.keys())
+        for uid in targets:
             if uid != user_id:
                 await self.send_to_user(uid, "presence", payload)
 

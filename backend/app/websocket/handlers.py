@@ -153,11 +153,23 @@ async def websocket_endpoint(ws: WebSocket):
         await manager.broadcast_presence(user_id, is_online=False)
 
 
+def _safe_uuid(val) -> uuid.UUID | None:
+    """C-4 FIX: Safe UUID parsing — returns None instead of crashing."""
+    if not val:
+        return None
+    try:
+        return uuid.UUID(str(val))
+    except (ValueError, AttributeError):
+        return None
+
+
 async def _handle_message(sender_id: uuid.UUID, payload: dict):
-    receiver_id = uuid.UUID(payload["receiver_id"])
-    content = payload.get("content")
+    receiver_id = _safe_uuid(payload.get("receiver_id"))
+    if not receiver_id:
+        return  # Invalid payload, ignore silently
+    content = payload.get("content", "")[:5000]  # M-6: limit content length
     message_type = payload.get("message_type", "text")
-    reply_to_id = uuid.UUID(payload["reply_to_id"]) if payload.get("reply_to_id") else None
+    reply_to_id = _safe_uuid(payload.get("reply_to_id"))
 
     # ── Smart Translation Layer ──
     # Auto-detect language from text + use conversation context for fluency
@@ -201,10 +213,12 @@ async def _handle_message(sender_id: uuid.UUID, payload: dict):
 
 
 async def _handle_group_message(sender_id: uuid.UUID, payload: dict):
-    group_id = uuid.UUID(payload["group_id"])
-    content = payload.get("content")
+    group_id = _safe_uuid(payload.get("group_id"))
+    if not group_id:
+        return
+    content = payload.get("content", "")[:5000]
     message_type = payload.get("message_type", "text")
-    reply_to_id = uuid.UUID(payload["reply_to_id"]) if payload.get("reply_to_id") else None
+    reply_to_id = _safe_uuid(payload.get("reply_to_id"))
 
     sender_lang = await _get_user_lang(sender_id)
 
@@ -244,14 +258,18 @@ async def _handle_group_message(sender_id: uuid.UUID, payload: dict):
 
 
 async def _handle_typing(sender_id: uuid.UUID, payload: dict):
-    receiver_id = uuid.UUID(payload["receiver_id"])
+    receiver_id = _safe_uuid(payload.get("receiver_id"))
+    if not receiver_id:
+        return
     await manager.send_to_user(
         receiver_id, "typing", {"user_id": str(sender_id), "is_typing": payload.get("is_typing", True)}
     )
 
 
 async def _handle_group_typing(sender_id: uuid.UUID, payload: dict):
-    group_id = uuid.UUID(payload["group_id"])
+    group_id = _safe_uuid(payload.get("group_id"))
+    if not group_id:
+        return
     async with async_session() as db:
         result = await db.execute(
             select(GroupMember.user_id).where(GroupMember.group_id == group_id)
@@ -267,8 +285,10 @@ async def _handle_group_typing(sender_id: uuid.UUID, payload: dict):
 
 
 async def _handle_seen(user_id: uuid.UUID, payload: dict):
-    message_ids = [uuid.UUID(mid) for mid in payload.get("message_ids", [])]
-    sender_id = uuid.UUID(payload["sender_id"])
+    message_ids = [u for mid in payload.get("message_ids", []) if (u := _safe_uuid(mid))]
+    sender_id = _safe_uuid(payload.get("sender_id"))
+    if not sender_id or not message_ids:
+        return
 
     async with async_session() as db:
         await update_message_status(db, message_ids, MessageStatus.SEEN, user_id)
@@ -280,7 +300,9 @@ async def _handle_seen(user_id: uuid.UUID, payload: dict):
 
 
 async def _handle_webrtc(sender_id: uuid.UUID, event: str, payload: dict):
-    target_id = uuid.UUID(payload["target_id"])
+    target_id = _safe_uuid(payload.get("target_id"))
+    if not target_id:
+        return
     await manager.send_to_user(target_id, event, {
         **payload, "from_user_id": str(sender_id),
     })
