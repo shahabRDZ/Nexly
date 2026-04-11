@@ -87,6 +87,18 @@ os.makedirs(settings.media_dir, exist_ok=True)
 app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 
+@app.on_event("startup")
+async def startup():
+    from app.services.background_tasks import start_background_tasks
+    start_background_tasks()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    from app.services.background_tasks import stop_background_tasks
+    stop_background_tasks()
+
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "Nexly", "version": "2.1.0"}
+    return {"status": "ok", "app": "Nexly", "version": "2.2.0"}

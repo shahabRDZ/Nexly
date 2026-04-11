@@ -17,8 +17,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/send-otp")
 async def send_otp(body: PhoneRequest):
     """Send OTP to the given phone number."""
-    code = await generate_otp(body.phone)
-    # C-1 FIX: Only return debug code in dev mode
+    try:
+        code = await generate_otp(body.phone)
+    except ValueError as e:
+        raise HTTPException(status_code=429, detail=str(e))
     response = {"message": "OTP sent"}
     if settings.sms_provider == "console":
         response["debug_code"] = code

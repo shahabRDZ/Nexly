@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, Boolean, Integer, Float, Text, func
+from sqlalchemy import String, DateTime, ForeignKey, Boolean, Integer, Float, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +21,7 @@ class AnonymousRoom(Base):
 
 class AnonymousParticipant(Base):
     __tablename__ = "anonymous_participants"
+    __table_args__ = (UniqueConstraint("room_id", "user_id", name="uq_anon_participant"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     room_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("anonymous_rooms.id", ondelete="CASCADE"), index=True)

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, Boolean, Integer, func
+from sqlalchemy import String, DateTime, ForeignKey, Boolean, Integer, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +24,7 @@ class Channel(Base):
 
 class ChannelSubscriber(Base):
     __tablename__ = "channel_subscribers"
+    __table_args__ = (UniqueConstraint("channel_id", "user_id", name="uq_channel_sub"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     channel_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("channels.id", ondelete="CASCADE"), index=True)

@@ -3,6 +3,7 @@ import uuid
 
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -146,14 +147,19 @@ async def send_voice_message(
 # ── Reply ──
 
 
+class ReplyBody(BaseModel):
+    receiver_id: uuid.UUID
+    content: str
+
+
 @router.post("/reply/{message_id}", response_model=MessageOut)
 async def reply_to_message(
     message_id: uuid.UUID,
-    receiver_id: uuid.UUID,
-    content: str,
+    body: ReplyBody,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """H-8 FIX: Content in body, not query string."""
     original = await db.get(Message, message_id)
     if not original:
         raise HTTPException(status_code=404, detail="Original message not found")
@@ -161,8 +167,8 @@ async def reply_to_message(
     msg = await save_message(
         db,
         sender_id=current_user.id,
-        receiver_id=receiver_id,
-        content=content,
+        receiver_id=body.receiver_id,
+        content=body.content,
         reply_to_id=message_id,
     )
     return msg
@@ -229,6 +235,11 @@ async def delete_message(
 # ── Pin ──
 
 
+def _check_message_access(msg: Message, user_id) -> bool:
+    """H-2/H-3 FIX: Verify user is a participant in the message conversation."""
+    return user_id in (msg.sender_id, msg.receiver_id)
+
+
 @router.post("/{message_id}/pin")
 async def pin_message(
     message_id: uuid.UUID,
@@ -238,6 +249,8 @@ async def pin_message(
     msg = await db.get(Message, message_id)
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
+    if not _check_message_access(msg, current_user.id):
+        raise HTTPException(status_code=403, detail="Not a participant")
     from datetime import datetime, timezone
     msg.is_pinned = True
     msg.pinned_at = datetime.now(timezone.utc)
@@ -254,6 +267,8 @@ async def unpin_message(
     msg = await db.get(Message, message_id)
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
+    if not _check_message_access(msg, current_user.id):
+        raise HTTPException(status_code=403, detail="Not a participant")
     msg.is_pinned = False
     msg.pinned_at = None
     await db.commit()
@@ -269,13 +284,17 @@ async def get_read_receipts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    msg = await db.get(Message, message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if not _check_message_access(msg, current_user.id):
+        raise HTTPException(status_code=403, detail="Not a participant")
     result = await db.execute(
         select(ReadReceipt, User)
         .join(User, ReadReceipt.user_id == User.id)
         .where(ReadReceipt.message_id == message_id)
     )
-    receipts = [
+    return [
         {"user_id": str(r.user_id), "name": u.name, "avatar_url": u.avatar_url, "read_at": r.read_at.isoformat()}
         for r, u in result.all()
     ]
-    return receipts

@@ -73,13 +73,19 @@ async def create_media_story(
     ct = file.content_type or ""
     story_type = StoryType.VIDEO if "video" in ct else StoryType.IMAGE
 
+    # M-16 + L-6 FIX: Size limit + extension whitelist
+    SAFE_EXT = {"jpg", "jpeg", "png", "gif", "webp", "mp4", "webm", "mov"}
     story_dir = os.path.join(settings.media_dir, "stories")
     os.makedirs(story_dir, exist_ok=True)
-    ext = file.filename.rsplit(".", 1)[-1] if file.filename else "jpg"
+    raw_ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "jpg"
+    ext = raw_ext if raw_ext in SAFE_EXT else "jpg"
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(story_dir, filename)
+    content = await file.read()
+    if len(content) > settings.max_upload_size:
+        raise HTTPException(status_code=413, detail="File too large")
     async with aiofiles.open(filepath, "wb") as f:
-        await f.write(await file.read())
+        await f.write(content)
 
     story = Story(
         user_id=current_user.id,

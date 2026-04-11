@@ -79,6 +79,13 @@ async def search_messages(
             and_(Message.sender_id == other_user_id, Message.receiver_id == current_user.id),
         ))
     elif group_id:
+        # H-12 FIX: Verify user is member of the group
+        from app.models.group import GroupMember
+        member_check = await db.execute(
+            select(GroupMember).where(GroupMember.group_id == group_id, GroupMember.user_id == current_user.id)
+        )
+        if not member_check.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Not a group member")
         q = q.where(Message.group_id == group_id)
     else:
         q = q.where(or_(Message.sender_id == current_user.id, Message.receiver_id == current_user.id))

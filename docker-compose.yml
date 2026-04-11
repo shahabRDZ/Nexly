@@ -42,7 +42,9 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://nexly:nexly_secret@postgres:5432/nexly
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-}
+      # H-1/L-10 FIX: If not set, config.py auto-generates a random key
+      # Set a persistent key in .env for production: SECRET_KEY=your-secure-random-key
+      # SECRET_KEY: ${SECRET_KEY}  # Intentionally omitted — auto-generated if missing
       SMS_PROVIDER: console
       LIBRETRANSLATE_URL: http://libretranslate:5000
       TRANSLATION_ENABLED: "true"

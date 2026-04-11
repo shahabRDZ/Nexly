@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import async_session
 from app.models.message import Message, MessageStatus
+from app.models.block import Block
 from app.models.group import GroupMember
 from app.models.user import User
 from app.services.auth_service import decode_access_token
@@ -17,6 +18,19 @@ from app.services.translation_service import translate_for_user, detect_language
 from app.websocket.manager import manager
 
 logger = logging.getLogger(__name__)
+
+
+async def _is_blocked(sender_id: uuid.UUID, receiver_id: uuid.UUID) -> bool:
+    """H-11 FIX: Check if either user has blocked the other."""
+    async with async_session() as db:
+        from sqlalchemy import or_, and_
+        result = await db.execute(
+            select(Block.id).where(or_(
+                and_(Block.blocker_id == receiver_id, Block.blocked_id == sender_id),
+                and_(Block.blocker_id == sender_id, Block.blocked_id == receiver_id),
+            )).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
 
 async def _get_user_lang(user_id: uuid.UUID) -> str:
@@ -166,8 +180,11 @@ def _safe_uuid(val) -> uuid.UUID | None:
 async def _handle_message(sender_id: uuid.UUID, payload: dict):
     receiver_id = _safe_uuid(payload.get("receiver_id"))
     if not receiver_id:
-        return  # Invalid payload, ignore silently
-    content = payload.get("content", "")[:5000]  # M-6: limit content length
+        return
+    # H-11 FIX: Check block status
+    if await _is_blocked(sender_id, receiver_id):
+        return  # Silently drop message if blocked
+    content = payload.get("content", "")[:5000]
     message_type = payload.get("message_type", "text")
     reply_to_id = _safe_uuid(payload.get("reply_to_id"))
 

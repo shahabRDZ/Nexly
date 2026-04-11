@@ -15,7 +15,7 @@ router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
 class SyncContactsRequest(BaseModel):
-    phone_numbers: list[str]
+    phone_numbers: list[str]  # C-8 FIX: enforced in endpoint below (max 500)
 
 
 class SyncContactsResponse(BaseModel):
@@ -30,6 +30,9 @@ async def sync_contacts(
     db: AsyncSession = Depends(get_db),
 ):
     """Check which phone contacts are registered on Nexly."""
+    # C-8 FIX: Limit phone numbers per request
+    if len(body.phone_numbers) > 500:
+        raise HTTPException(status_code=400, detail="Max 500 phone numbers per sync")
     result = await db.execute(
         select(User).where(User.phone.in_(body.phone_numbers), User.id != current_user.id)
     )

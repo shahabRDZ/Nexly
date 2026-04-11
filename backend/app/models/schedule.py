@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, Boolean, Text, func
+from sqlalchemy import String, DateTime, ForeignKey, Boolean, Index, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,7 @@ class ScheduleEvent(Base):
 class ScheduledMessage(Base):
     """Messages scheduled to be sent at a future time."""
     __tablename__ = "scheduled_messages"
+    __table_args__ = (Index("ix_scheduled_pending", "sent", "send_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sender_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)

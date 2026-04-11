@@ -132,14 +132,7 @@ async def detect_language(text: str) -> str:
     if char_lang:
         return char_lang
 
-    # Use Google Translate auto-detect
-    try:
-        detected = GoogleTranslator(source='auto', target='en').translate(text[:50])
-        # GoogleTranslator doesn't expose detected lang directly,
-        # but we can try the detect endpoint
-    except Exception:
-        pass
-
+    # M-15 FIX: Removed wasted Google Translate call. Use LibreTranslate detect only.
     # Try LibreTranslate detect
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:

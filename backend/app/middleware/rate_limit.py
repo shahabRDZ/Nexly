@@ -1,43 +1,59 @@
+"""C-1 FIX: Redis-based rate limiter — works across multiple workers/containers."""
 import time
-from collections import defaultdict
 
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import redis.asyncio as aioredis
+from app.config import settings
+
+_redis: aioredis.Redis | None = None
+
+
+async def _get_redis() -> aioredis.Redis:
+    global _redis
+    if _redis is None:
+        _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+    return _redis
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiter. Use Redis in production for multi-instance."""
-
     def __init__(self, app, requests_per_minute: int = 60, burst: int = 20):
         super().__init__(app)
         self.rpm = requests_per_minute
         self.burst = burst
-        self._buckets: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(self, request: Request, call_next):
-        # Skip rate limit for health and docs
-        if request.url.path in ("/health", "/docs", "/openapi.json"):
+        if request.url.path in ("/health", "/docs", "/openapi.json", "/redoc"):
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"
-        now = time.time()
-        window = 60.0
 
-        # Clean old entries
-        bucket = self._buckets[client_ip]
-        self._buckets[client_ip] = [t for t in bucket if now - t < window]
-        bucket = self._buckets[client_ip]
+        try:
+            r = await _get_redis()
+            now = int(time.time())
+            minute_key = f"rl:{client_ip}:{now // 60}"
+            second_key = f"rl_burst:{client_ip}:{now // 2}"
 
-        if len(bucket) >= self.rpm:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Rate limit exceeded. Max {self.rpm} requests per minute.",
-            )
+            # Per-minute limit
+            pipe = r.pipeline()
+            pipe.incr(minute_key)
+            pipe.expire(minute_key, 120)
+            pipe.incr(second_key)
+            pipe.expire(second_key, 5)
+            results = await pipe.execute()
 
-        # Burst check (10 requests in 2 seconds)
-        recent = [t for t in bucket if now - t < 2.0]
-        if len(recent) >= self.burst:
-            raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
+            minute_count = results[0]
+            burst_count = results[2]
 
-        bucket.append(now)
+            if minute_count > self.rpm:
+                raise HTTPException(status_code=429, detail=f"Rate limit exceeded ({self.rpm}/min)")
+            if burst_count > self.burst:
+                raise HTTPException(status_code=429, detail="Too many requests, slow down")
+
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # If Redis is down, allow request through
+
         return await call_next(request)
