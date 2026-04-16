@@ -9,3 +9,25 @@ node_modules/
 .vite/
 .DS_Store
 *.log
+
+# Virtual environment
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# OS
+Thumbs.db
+
+# Frontend build
+dist/
