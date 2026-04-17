@@ -94,3 +94,14 @@ Copy `.env.example` and configure:
 ## License
 
 MIT
+
+---
+
+## Join the Discussion
+
+Have ideas or experience to share? Check out our open discussions:
+
+- [Real-time architecture: WebSocket vs SSE vs message broker](https://github.com/shahabRDZ/Nexly/discussions/33)
+- [Translation strategy: API vs local model vs caching](https://github.com/shahabRDZ/Nexly/discussions/34)
+
+We'd love to hear your thoughts!
