@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
 ALGORITHM = "HS256"
 
 _redis: aioredis.Redis | None = None
@@ -40,7 +42,8 @@ async def is_token_blacklisted(jti: str) -> bool:
     try:
         r = await _get_redis()
         return await r.exists(f"blacklist:{jti}") > 0
-    except Exception:
+    except Exception as e:
+        logger.warning("Redis check failed for token blacklist: %s", e)
         return False
 
 
@@ -49,8 +52,8 @@ async def blacklist_token(jti: str, ttl_seconds: int = 604800) -> None:
     try:
         r = await _get_redis()
         await r.setex(f"blacklist:{jti}", ttl_seconds, "1")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error("Failed to blacklist token %s: %s", jti, e)
 
 
 async def blacklist_all_user_tokens(user_id: uuid.UUID) -> None:
@@ -58,8 +61,8 @@ async def blacklist_all_user_tokens(user_id: uuid.UUID) -> None:
     try:
         r = await _get_redis()
         await r.setex(f"user_logout:{user_id}", 604800, str(int(datetime.now(timezone.utc).timestamp())))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error("Failed to blacklist tokens for user %s: %s", user_id, e)
 
 
 async def is_user_logged_out_after(user_id: str, token_iat: int | None) -> bool:
@@ -69,8 +72,8 @@ async def is_user_logged_out_after(user_id: str, token_iat: int | None) -> bool:
         logout_time = await r.get(f"user_logout:{user_id}")
         if logout_time and token_iat:
             return int(logout_time) > token_iat
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis check failed for user logout status: %s", e)
     return False
 
 
