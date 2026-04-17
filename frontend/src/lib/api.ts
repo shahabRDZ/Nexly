@@ -210,8 +210,8 @@ export const api = {
   getMessageAnalytics: (days?: number) => request<AnalyticsPoint[]>(`/admin/analytics/messages?days=${days || 7}`),
   getUserAnalytics: (days?: number) => request<AnalyticsPoint[]>(`/admin/analytics/users?days=${days || 7}`),
   getAdminUsers: (limit?: number, search?: string) =>
-    request<any[]>(`/admin/users?limit=${limit || 50}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
-  getReports: () => request<any[]>('/admin/reports'),
+    request<AdminUser[]>(`/admin/users?limit=${limit || 50}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  getReports: () => request<ReportItem[]>('/admin/reports'),
   resolveReport: (id: string) => request(`/admin/reports/${id}/resolve`, { method: 'POST' }),
 };
 
@@ -234,6 +234,7 @@ export interface Message {
   source_language: string | null; translated: boolean;
   message_type: string;
   media_url: string | null; media_name: string | null; media_size: number | null;
+  sticker_url: string | null; location_name: string | null;
   status: 'sent' | 'delivered' | 'seen';
   reply_to_id: string | null; is_forwarded: boolean; is_pinned: boolean;
   deleted_for_all: boolean; created_at: string; edited_at: string | null;
@@ -313,4 +314,14 @@ export interface DashboardData {
 
 export interface AnalyticsPoint {
   date: string; count: number;
+}
+
+export interface AdminUser {
+  id: string; name: string; phone: string; avatar_url: string | null;
+  language: string; is_online: boolean; created_at: string;
+}
+
+export interface ReportItem {
+  id: string; reporter_id: string; reported_user_id: string | null;
+  reason: string; description: string | null; created_at: string;
 }

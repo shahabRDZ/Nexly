@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Smile, Mic, Paperclip, Phone, Video, X, Reply, Forward, Trash2, Pin, Search, Edit3, MapPin, Sparkles, Bot } from 'lucide-react';
-import { api, type User, type Message, type ReactionGroup } from '../lib/api';
+import { api, type User, type Message, type SearchResult, type ReactionGroup } from '../lib/api';
 import { socket } from '../lib/ws';
 import { useChat } from '../stores/chat';
 import { Avatar } from '../components/Avatar';
@@ -26,14 +26,14 @@ export function ChatRoom() {
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<ReturnType<typeof setInterval>>();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const myId = localStorage.getItem('userId')!;
+  const myId = localStorage.getItem('userId') ?? '';
   const chatMessages = messages.get(userId!) || [];
 
   useEffect(() => {

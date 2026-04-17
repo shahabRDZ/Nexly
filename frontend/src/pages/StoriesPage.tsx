@@ -11,7 +11,7 @@ export function StoriesPage() {
   useEffect(() => { loadFeed(); }, []);
   const loadFeed = () => api.getStoryFeed().then(setFeed);
 
-  const myId = localStorage.getItem('userId')!;
+  const myId = localStorage.getItem('userId') ?? '';
 
   return (
     <div className="pb-20">
@@ -58,12 +58,14 @@ function StoryViewer({ group, onClose }: { group: StoryGroup; onClose: () => voi
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
+    let cancelled = false;
     if (story && !story.is_viewed) api.viewStory(story.id);
     timerRef.current = setTimeout(() => {
+      if (cancelled) return;
       if (idx < group.stories.length - 1) setIdx(idx + 1);
       else onClose();
     }, 5000);
-    return () => clearTimeout(timerRef.current);
+    return () => { cancelled = true; clearTimeout(timerRef.current); };
   }, [idx]);
 
   if (!story) return null;

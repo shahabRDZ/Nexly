@@ -12,7 +12,7 @@ export function CallsPage() {
   const [tab, setTab] = useState<Tab>('all');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const myId = localStorage.getItem('userId')!;
+  const myId = localStorage.getItem('userId') ?? '';
 
   useEffect(() => {
     loadCalls();
