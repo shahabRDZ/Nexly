@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,8 +28,8 @@ ANON_NAMES = ["Shadow", "Phoenix", "Ghost", "Raven", "Storm", "Cipher", "Echo", 
 
 class AnonRoomCreate(BaseModel):
     topic: str
-    max_participants: int = 50
-    hours: int = 24
+    max_participants: int = Field(50, ge=1, le=1000)
+    hours: int = Field(24, ge=1, le=720)
 
 
 @router.post("/anonymous-rooms")
@@ -129,6 +129,8 @@ async def get_whiteboard(wb_id: uuid.UUID, current_user: User = Depends(get_curr
     wb = await db.get(Whiteboard, wb_id)
     if not wb:
         raise HTTPException(status_code=404)
+    if wb.creator_id != current_user.id and wb.chat_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     return {"id": str(wb.id), "title": wb.title, "canvas_data": wb.canvas_data, "updated_at": wb.updated_at.isoformat()}
 
 
@@ -137,6 +139,8 @@ async def update_whiteboard(wb_id: uuid.UUID, body: WhiteboardUpdate, current_us
     wb = await db.get(Whiteboard, wb_id)
     if not wb:
         raise HTTPException(status_code=404)
+    if wb.creator_id != current_user.id and wb.chat_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     wb.canvas_data = body.canvas_data
     await db.commit()
     # Broadcast to collaborators via WS
@@ -179,6 +183,8 @@ async def get_playlist(playlist_id: uuid.UUID, current_user: User = Depends(get_
     pl = await db.get(Playlist, playlist_id)
     if not pl:
         raise HTTPException(status_code=404)
+    if pl.creator_id != current_user.id and pl.chat_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     tracks_r = await db.execute(select(PlaylistTrack).where(PlaylistTrack.playlist_id == playlist_id).order_by(PlaylistTrack.added_at.asc()))
     tracks = [{"id": str(t.id), "title": t.title, "artist": t.artist, "url": t.url, "duration": t.duration_seconds} for t in tracks_r.scalars().all()]
     return {"id": str(pl.id), "title": pl.title, "tracks": tracks}
@@ -189,6 +195,8 @@ async def add_track(playlist_id: uuid.UUID, body: TrackAdd, current_user: User =
     pl = await db.get(Playlist, playlist_id)
     if not pl:
         raise HTTPException(status_code=404)
+    if pl.creator_id != current_user.id and pl.chat_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     track = PlaylistTrack(playlist_id=playlist_id, added_by=current_user.id, title=body.title, artist=body.artist, url=body.url, duration_seconds=body.duration_seconds)
     db.add(track)
     await db.commit()
@@ -197,6 +205,11 @@ async def add_track(playlist_id: uuid.UUID, body: TrackAdd, current_user: User =
 
 @router.delete("/playlists/{playlist_id}/tracks/{track_id}")
 async def remove_track(playlist_id: uuid.UUID, track_id: uuid.UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    pl = await db.get(Playlist, playlist_id)
+    if not pl:
+        raise HTTPException(status_code=404)
+    if pl.creator_id != current_user.id and pl.chat_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     track = await db.get(PlaylistTrack, track_id)
     if not track or track.playlist_id != playlist_id:
         raise HTTPException(status_code=404)

@@ -117,7 +117,7 @@ async def user_analytics(
 
 @router.get("/users")
 async def list_users(
-    limit: int = 50,
+    limit: int = 50,  # capped at query level
     offset: int = 0,
     search: str = "",
     admin: User = Depends(_require_admin),
@@ -126,7 +126,7 @@ async def list_users(
     q = select(User)
     if search:
         q = q.where(User.name.ilike(f"%{search}%") | User.phone.ilike(f"%{search}%"))
-    q = q.order_by(User.created_at.desc()).offset(offset).limit(limit)
+    q = q.order_by(User.created_at.desc()).offset(offset).limit(min(limit, 500))
     result = await db.execute(q)
     users = result.scalars().all()
     return [
