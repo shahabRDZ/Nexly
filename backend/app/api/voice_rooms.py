@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +20,7 @@ class RoomCreate(BaseModel):
     title: str
     description: str = ""
     is_private: bool = False
-    max_speakers: int = 10
+    max_speakers: int = Field(10, ge=1, le=100)
 
 
 class RoomOut(BaseModel):
