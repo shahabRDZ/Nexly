@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -126,7 +126,10 @@ async def subscribe(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Already subscribed")
     db.add(ChannelSubscriber(channel_id=channel_id, user_id=current_user.id))
-    channel.subscriber_count += 1
+    await db.execute(
+        update(Channel).where(Channel.id == channel_id)
+        .values(subscriber_count=Channel.subscriber_count + 1)
+    )
     await db.commit()
     return {"detail": "Subscribed"}
 
@@ -148,8 +151,10 @@ async def unsubscribe(
     if sub.is_admin:
         raise HTTPException(status_code=400, detail="Admins cannot unsubscribe")
     await db.delete(sub)
-    channel = await db.get(Channel, channel_id)
-    channel.subscriber_count = max(0, channel.subscriber_count - 1)
+    await db.execute(
+        update(Channel).where(Channel.id == channel_id)
+        .values(subscriber_count=func.greatest(0, Channel.subscriber_count - 1))
+    )
     await db.commit()
     return {"detail": "Unsubscribed"}
 
