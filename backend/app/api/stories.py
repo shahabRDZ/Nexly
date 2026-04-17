@@ -132,10 +132,14 @@ async def get_story_feed(
     for s in stories:
         user_stories.setdefault(s.user_id, []).append(s)
 
+    # Batch fetch all users at once instead of one query per user
+    user_ids = list(user_stories.keys())
+    users_result = await db.execute(select(User).where(User.id.in_(user_ids)))
+    users_map = {u.id: u for u in users_result.scalars().all()}
+
     groups = []
     for uid, sts in user_stories.items():
-        user_result = await db.execute(select(User).where(User.id == uid))
-        user = user_result.scalar_one_or_none()
+        user = users_map.get(uid)
         if not user:
             continue
         story_outs = [_story_out(s, s.id in viewed_ids) for s in sts]
