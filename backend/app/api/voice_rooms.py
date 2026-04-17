@@ -24,9 +24,15 @@ class RoomCreate(BaseModel):
 
 
 class RoomOut(BaseModel):
-    id: str; title: str; description: str; host_id: str
-    status: str; speaker_count: int; listener_count: int
-    is_private: bool; created_at: str
+    id: str
+    title: str
+    description: str
+    host_id: str
+    status: str
+    speaker_count: int
+    listener_count: int
+    is_private: bool
+    created_at: str
 
 
 @router.post("/", response_model=RoomOut)

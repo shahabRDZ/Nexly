@@ -1,4 +1,5 @@
 """C-1 FIX: Redis-based rate limiter — works across multiple workers/containers."""
+import logging
 import time
 
 from fastapi import Request, HTTPException
@@ -6,6 +7,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 import redis.asyncio as aioredis
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _redis: aioredis.Redis | None = None
 
@@ -53,7 +56,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         except HTTPException:
             raise
-        except Exception:
-            pass  # If Redis is down, allow request through
+        except Exception as e:
+            logger.warning("Rate limiter unavailable (Redis down?): %s", e)
 
         return await call_next(request)
