@@ -205,6 +205,51 @@ export const api = {
   sendSticker: (receiverId: string, url: string, type: 'sticker' | 'gif') =>
     request('/messages/sticker', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId, url, type }) }),
 
+  // Chat Settings (pin, archive, mute, folders)
+  getChatFolders: () => request<ChatFolder[]>('/chat-settings/folders'),
+  createChatFolder: (name: string, icon?: string) =>
+    request<ChatFolder>('/chat-settings/folders', { method: 'POST', body: JSON.stringify({ name, icon: icon ?? null }) }),
+  updateChatFolder: (id: string, name: string, icon?: string) =>
+    request<ChatFolder>(`/chat-settings/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ name, icon: icon ?? null }) }),
+  deleteChatFolder: (id: string) => request(`/chat-settings/folders/${id}`, { method: 'DELETE' }),
+
+  pinChat: (partnerId: string) =>
+    request(`/chat-settings/pin?partner_id=${partnerId}`, { method: 'POST' }),
+  unpinChat: (partnerId: string) =>
+    request(`/chat-settings/pin?partner_id=${partnerId}`, { method: 'DELETE' }),
+  archiveChat: (partnerId: string) =>
+    request(`/chat-settings/archive?partner_id=${partnerId}`, { method: 'POST' }),
+  unarchiveChat: (partnerId: string) =>
+    request(`/chat-settings/archive?partner_id=${partnerId}`, { method: 'DELETE' }),
+  muteChat: (partnerId: string, hours?: number) =>
+    request(`/chat-settings/mute?partner_id=${partnerId}`, {
+      method: 'POST', body: JSON.stringify({ hours: hours ?? null }),
+    }),
+  unmuteChat: (partnerId: string) =>
+    request(`/chat-settings/mute?partner_id=${partnerId}`, { method: 'DELETE' }),
+  assignChatFolder: (partnerId: string, folderId: string | null) =>
+    request(`/chat-settings/folder?partner_id=${partnerId}`, {
+      method: 'POST', body: JSON.stringify({ folder_id: folderId }),
+    }),
+
+  // Archived list
+  getArchivedConversations: () => request<Conversation[]>('/messages/conversations?archived=true'),
+  getConversationsInFolder: (folderId: string) =>
+    request<Conversation[]>(`/messages/conversations?folder_id=${folderId}`),
+
+  // Saved Messages
+  getSavedMessages: (limit = 50, before?: string) =>
+    request<Message[]>(`/saved/?limit=${limit}${before ? `&before=${before}` : ''}`),
+  saveText: (content: string) =>
+    request<Message>('/saved/text', { method: 'POST', body: JSON.stringify({ content }) }),
+  saveMedia: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<Message>('/saved/media', { method: 'POST', body: form });
+  },
+  forwardToSaved: (messageId: string) =>
+    request<Message>(`/saved/forward/${messageId}`, { method: 'POST' }),
+
   // Admin
   getDashboard: () => request<DashboardData>('/admin/dashboard'),
   getMessageAnalytics: (days?: number) => request<AnalyticsPoint[]>(`/admin/analytics/messages?days=${days || 7}`),
@@ -242,6 +287,13 @@ export interface Message {
 
 export interface Conversation {
   user: User; last_message: Message | null; unread_count: number;
+  is_pinned?: boolean; is_archived?: boolean;
+  is_muted?: boolean; muted_until?: string | null;
+  folder_id?: string | null;
+}
+
+export interface ChatFolder {
+  id: string; name: string; icon: string | null; position: number;
 }
 
 export interface ReadReceipt {

@@ -3,7 +3,7 @@ AI Service — Smart Reply, Chat Summary, Voice-to-Text, AI Bot.
 
 Uses a pluggable backend approach:
 - Default: Rule-based fallback (no external API needed)
-- Optional: OpenAI, Anthropic, or local LLM via config
+- Optional: pluggable external or local LLM via config
 
 For voice-to-text, uses the LibreTranslate/Whisper approach or fallback.
 """

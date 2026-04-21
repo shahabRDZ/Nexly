@@ -15,6 +15,7 @@ from app.models.innovative import (
     PremiumMessage, PremiumUnlock,
     Whiteboard, Playlist, PlaylistTrack, ChatRecap,
 )
+from app.models.chat_settings import ChatFolder, ChatSettings
 
 __all__ = [
     "User", "Message", "MessageStatus", "MessageType", "MessageDeletion", "ReadReceipt",
@@ -25,4 +26,5 @@ __all__ = [
     "ScheduleEvent", "ScheduledMessage",
     "AnonymousRoom", "AnonymousParticipant", "PremiumMessage", "PremiumUnlock",
     "Whiteboard", "Playlist", "PlaylistTrack", "ChatRecap",
+    "ChatFolder", "ChatSettings",
 ]

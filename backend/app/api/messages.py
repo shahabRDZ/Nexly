@@ -29,18 +29,47 @@ ALLOWED_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 @router.get("/conversations", response_model=list[ConversationPreview])
 async def list_conversations(
+    archived: bool = False,
+    folder_id: uuid.UUID | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from datetime import datetime, timezone
+
     convos = await get_conversations_list(db, current_user.id)
-    return [
-        ConversationPreview(
-            user=UserPreview.model_validate(c["partner"]),
-            last_message=MessageOut.model_validate(c["last_message"]) if c["last_message"] else None,
-            unread_count=c["unread_count"],
+    now = datetime.now(timezone.utc)
+
+    out = []
+    for c in convos:
+        s = c.get("settings")
+        is_archived = bool(s and s.is_archived)
+        if archived and not is_archived:
+            continue
+        if not archived and is_archived:
+            continue
+        if folder_id is not None:
+            if not s or s.folder_id != folder_id:
+                continue
+
+        muted_until = s.muted_until if s else None
+        is_muted = False
+        if muted_until is not None:
+            mu = muted_until if muted_until.tzinfo else muted_until.replace(tzinfo=timezone.utc)
+            is_muted = mu > now
+
+        out.append(
+            ConversationPreview(
+                user=UserPreview.model_validate(c["partner"]),
+                last_message=MessageOut.model_validate(c["last_message"]) if c["last_message"] else None,
+                unread_count=c["unread_count"],
+                is_pinned=bool(s and s.is_pinned),
+                is_archived=is_archived,
+                is_muted=is_muted,
+                muted_until=muted_until,
+                folder_id=s.folder_id if s else None,
+            )
         )
-        for c in convos
-    ]
+    return out
 
 
 @router.get("/{other_user_id}", response_model=list[MessageOut])

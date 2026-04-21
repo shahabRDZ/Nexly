@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select, and_, or_, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.chat_settings import ChatSettings
 from app.models.message import Message, MessageStatus, MessageDeletion
 from app.models.user import User
 
@@ -131,7 +132,7 @@ def _can_transition(current: MessageStatus, new: MessageStatus) -> bool:
 
 async def get_conversations_list(db: AsyncSession, user_id: uuid.UUID) -> list[dict]:
     """H-3 FIX: Reduced from 3N queries to 3 queries total."""
-    # 1. Get all partner IDs
+    # 1. Get all partner IDs (exclude self-chats — those live in Saved Messages)
     partner_ids_q = (
         select(
             case(
@@ -142,6 +143,7 @@ async def get_conversations_list(db: AsyncSession, user_id: uuid.UUID) -> list[d
         .where(
             or_(Message.sender_id == user_id, Message.receiver_id == user_id),
             Message.group_id == None, Message.channel_id == None,
+            Message.sender_id != Message.receiver_id,
         )
         .distinct()
     )
@@ -167,7 +169,16 @@ async def get_conversations_list(db: AsyncSession, user_id: uuid.UUID) -> list[d
     unread_result = await db.execute(unread_q)
     unread_map = {row[0]: row[1] for row in unread_result.all()}
 
-    # 4. Get last message per partner (still per-partner but minimal)
+    # 4. Batch fetch per-chat settings (pin, archive, folder, mute)
+    settings_q = select(ChatSettings).where(
+        ChatSettings.user_id == user_id,
+        ChatSettings.partner_id.in_(partner_ids),
+    )
+    settings_map: dict[uuid.UUID, ChatSettings] = {
+        s.partner_id: s for s in (await db.execute(settings_q)).scalars().all()
+    }
+
+    # 5. Last message per partner (per-partner, minimal payload)
     conversations = []
     for pid in partner_ids:
         partner = users_map.get(pid)
@@ -190,10 +201,20 @@ async def get_conversations_list(db: AsyncSession, user_id: uuid.UUID) -> list[d
             "partner": partner,
             "last_message": last_msg,
             "unread_count": unread_map.get(pid, 0),
+            "settings": settings_map.get(pid),
         })
 
-    conversations.sort(
-        key=lambda c: c["last_message"].created_at if c["last_message"] else 0,
-        reverse=True,
-    )
+    # Sort: pinned first (newest pin on top), then by last_message time
+    from datetime import datetime, timezone
+    epoch = datetime.fromtimestamp(0, tz=timezone.utc)
+
+    def _sort_key(c):
+        s = c["settings"]
+        pinned = bool(s and s.is_pinned)
+        pinned_at = s.pinned_at if s and s.pinned_at else epoch
+        last_at = c["last_message"].created_at if c["last_message"] else epoch
+        # Pinned chats first, then ordered by last message
+        return (0 if pinned else 1, -pinned_at.timestamp(), -last_at.timestamp() if last_at else 0)
+
+    conversations.sort(key=_sort_key)
     return conversations
