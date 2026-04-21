@@ -48,6 +48,11 @@ class ConversationPreview(BaseModel):
     user: "UserPreview"
     last_message: MessageOut | None
     unread_count: int
+    is_pinned: bool = False
+    is_archived: bool = False
+    is_muted: bool = False
+    muted_until: datetime | None = None
+    folder_id: uuid.UUID | None = None
 
 
 class UserPreview(BaseModel):

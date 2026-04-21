@@ -13,7 +13,7 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const hidePaths = ['/chat/', '/group/', '/channel/'];
+  const hidePaths = ['/chat/', '/group/', '/channel/', '/saved'];
   if (hidePaths.some((p) => location.pathname.startsWith(p))) return null;
 
   return (

@@ -9,6 +9,7 @@ from app.api import auth, users, messages, contacts
 from app.api import groups, channels, stories, calls, security, translation
 from app.api import reactions, polls, moderation, ai, enhanced_messages, admin
 from app.api import voice_rooms, schedule, innovative
+from app.api import chat_settings, saved_messages
 from app.config import settings
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.websocket.handlers import websocket_endpoint
@@ -78,6 +79,10 @@ app.include_router(admin.router, prefix="/api/v1")
 app.include_router(voice_rooms.router, prefix="/api/v1")
 app.include_router(schedule.router, prefix="/api/v1")
 app.include_router(innovative.router, prefix="/api/v1")
+
+# Chat organization (pin, archive, mute, folders, saved messages)
+app.include_router(chat_settings.router, prefix="/api/v1")
+app.include_router(saved_messages.router, prefix="/api/v1")
 
 # WebSocket
 app.websocket("/ws")(websocket_endpoint)

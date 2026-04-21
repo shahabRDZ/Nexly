@@ -6,6 +6,8 @@ import { CallOverlay } from './components/CallOverlay';
 import { LoginPage } from './pages/LoginPage';
 import { ChatsPage } from './pages/ChatsPage';
 import { ChatRoom } from './pages/ChatRoom';
+import { SavedMessagesPage } from './pages/SavedMessagesPage';
+import { ArchivedChatsPage } from './pages/ArchivedChatsPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { GroupsPage } from './pages/GroupsPage';
@@ -50,6 +52,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/chats" element={<ChatsPage />} />
         <Route path="/chat/:userId" element={<ChatRoom />} />
+        <Route path="/saved" element={<SavedMessagesPage />} />
+        <Route path="/archived" element={<ArchivedChatsPage />} />
         <Route path="/contacts" element={<ContactsPage />} />
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/group/:groupId" element={<GroupChatRoom />} />
